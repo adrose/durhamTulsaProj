@@ -5,8 +5,8 @@ require(reshape2)
 library(psych)
 library(visreg)
 library(lavaan)
-source("~/adroseHelperScripts/R/afgrHelpFunc.R")
-
+#source("~/adroseHelperScripts/R/afgrHelpFunc.R")
+source("~/GitHub/adroseHelperScripts/R/afgrHelpFunc.R")
 
 ### Load data
 in.dat.ou <- read.csv("./data/TRM_OUsample.csv")
@@ -69,7 +69,7 @@ data.target <- cbind(data.target, model.matrix(tmp.mod))
 
 ## Now specify the lavaan model
 myModel.me <- ' # regressions
-             f1 + f2 + f3 ~ condition2 + condition3
+             f1 + f2 + f3 ~ condition2 + condition3 + priorknowledge2
 
              # latent variable definitions 
                f1 =~ violence.b + blame.b + caused.b + intention.b + punish.b + allow.commit.b + knew.b + should.b + could.b  
@@ -105,6 +105,7 @@ fit.li <- sem(myModel.me, data=data.target, std.lv=TRUE, group = "priorknowledge
 lavTestLRT(fit, fit.l, fit.li)
 fit <- sem(myModel.me, data=data.target, std.lv=TRUE)
 fit2 <- sem(myModel.int, data=data.target, std.lv=TRUE)
+fit.cat <- sem(myModel.me, data=data.target, std.lv=TRUE, estimator ="ML")
 lavTestLRT(fit, fit2)
 
 

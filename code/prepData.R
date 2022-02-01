@@ -6,10 +6,24 @@ require(Hmisc)
 require(reshape2)
 library(psych)
 library(visreg)
+library(tidyverse)
 
 ### Load data
 in.dat.ou <- read.csv("./data/TRM_OUsample.csv")
 in.dat.uk <- read.csv("./data/TRM_UKsample.csv")
+
+## fix age differences
+In OU - value is year of age; In UK - 1 = 18-24, 2 = 25-34, 3 = 35-44, 4 = 45-54, 5 = 55-64, 6 = 65-74, 7 = 75+, 8 = Prefer not to answer
+in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==1] <- 22
+in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==2] <- 29
+in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==3] <- 39
+in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==4] <- 49
+in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==5] <- 59
+in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==6] <- 69
+in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==7] <- 75
+in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==8] <- NA
+
+
 
 ## Source files
 # Used to put multiple graphs on a single pdf 
@@ -81,6 +95,14 @@ for(i in 4:38){
 }
 dev.off()
 
+## now facet wrap them
+tmp.dat <- melt(in.dat.ou[,c(1, 3, 4:38)], id.vars = c("id", "condition"))
+## Now plot it
+all.plots <- tmp.dat %>% ggplot(., aes(x=condition, y=value)) +
+  geom_boxplot() +
+  geom_jitter() +
+  theme_bw() +
+  facet_wrap(variable ~ .)
 
 ## Train ordered logistic regression model
 model.formula <- paste("condition ~ ", paste(names(in.dat.ou)[4:38], collapse = "+"), sep = "")
@@ -132,10 +154,25 @@ data.target <- data.target[,colnames(data.target) %in% colnames(data.target.ou)]
 data.target.ou$cohort <- "OU"
 data.target$cohort <- "UK"
 data.target <- rbind(data.target, data.target.ou)
+
+## Plot demo vars
+hist(data.target$age)
+corrplot(cor(data.target[,4:30]))
+corrplot(cor(data.target[which(data.target$condition=="1"),4:30]))
+corrplot(cor(data.target[which(data.target$condition=="2"),4:30]))
+corrplot(cor(data.target[which(data.target$condition=="3"),4:30]))
+
 # rm the ou target
 #rm(data.target.ou)
 ## Now melt these so we can run some HLM models
 data.hlm <- melt(data.target, id.vars = c("id", "duration", "condition", "reparation", "priorknowledge", "allow", "gender", "age","cohort"))
+## Now plot it
+tmp.plot <- tmp.dat %>% ggplot(., aes(x=condition, y=value)) +
+  geom_boxplot() +
+  geom_jitter() +
+  theme_bw() +
+  facet_wrap(variable ~ .)
+
 ## Now grab the party to be blamed from the end of the varaible names
 data.hlm$variable <- as.character(data.hlm$variable)
 data.hlm$questionTarg <- substr(data.hlm$variable, nchar(data.hlm$variable), nchar(data.hlm$variable))
@@ -152,13 +189,14 @@ mod.three <- lmerTest::lmer(value ~ questionTarg * condition + priorknowledge + 
 ## Now try questionTarg by questionVal
 mod.four <- lmerTest::lmer(value ~ (questionTarg + questionVal + condition)^2 + (1|id), data=data.hlm)
 ## Now try priorKnowledge effects
-mod.five <- lmerTest::lmer(value ~ (priorknowledge * questionTarg + questionVal + condition)^3 + gender+ (1|id), data=data.hlm) ## sig interaction here
+mod.five <- lmerTest::lmer(value ~ (priorknowledge + questionTarg + questionVal + condition)^3 + gender+cohort+age+(1|id), data=data.hlm) ## sig interaction here
 ## Looks like apotentially intresting sig interaction here
 ## For the three way effect
 ## lets try to plot it
 p1 <- visreg(mod.five, "questionTarg", by="questionVal", cond=list(priorknowledge=1), gg=T) + theme_bw() + ggtitle("priorknowledge=1") + coord_cartesian(ylim=c(0,7))
 p2 <- visreg(mod.five, "questionTarg", by="questionVal", cond=list(priorknowledge=2), gg=T) + theme_bw() + ggtitle("priorknowledge=2") + coord_cartesian(ylim=c(0,7))
 multiplot(p1, p2, cols = 1)
+
 ## Now look at priorknowledge:questionTarg:condition interaction
 p1 <- visreg(mod.five, "questionTarg", by="condition",cond=list(priorknowledge=1), gg=T) + ggtitle("priorknowledge==1")
 p2 <- visreg(mod.five, "questionTarg", by="condition",cond=list(priorknowledge=2), gg=T) + ggtitle("priorknowledge==2")
@@ -171,6 +209,31 @@ p2 <- visreg(mod.sev, "condition", by="questionTarg", cond=list(gender=2), gg = 
 p3 <- visreg(mod.sev, "condition", by="questionTarg", cond=list(gender=4), gg = T)  + coord_cartesian(ylim=c(0,8)) + ggtitle("Gender==4")
 multiplot(p1, p2, p3, cols = 1)
 ## Now look for a race effect? --> no
+
+## Now look into prior knowledge specific interactions
+data.hlm.pk.1 <- data.hlm[which(data.hlm$priorknowledge==1),]
+data.hlm.pk.2 <- data.hlm[which(data.hlm$priorknowledge==2),]
+
+## Now run these same interactions
+mod.five.1 <- lmerTest::lmer(value ~ (questionTarg + questionVal + condition+ gender+ age + cohort)^2+(1|id), data=data.hlm.pk.1) ## sig interaction here
+mod.five.2 <- lmerTest::lmer(value ~ (questionTarg + questionVal + condition+ gender+ age + cohort)^2 + gender+ age+(1|id), data=data.hlm.pk.2) ## sig interaction here
+## No condition effects from prior knowledge == 2 - however big condition effects from ==1
+visreg(mod.five.1, "condition", by="questionTarg", overlay=T)
+visreg(mod.five.1, "age", by="questionTarg", overlay=T)
+visreg(mod.five.2, "condition", by="questionTarg", overlay=T)
+
+## Now run through each question to see if any univaraite differences
+all.mods <- list()
+for(i in unique(data.hlm.pk.1$questionTarg)){
+  mod.tmp <- lm(value ~ questionVal+condition + gender + age, data = data.hlm.pk.1[which(data.hlm.pk.1$questionTarg==i),])
+  print(anova(mod.tmp))
+  all.mods[[i]] <- mod.tmp
+}
+## Now look into the condition main effect for racial assignment
+summary(all.mods[[2]])
+visreg(all.mods[[2]], "questionVal")
+visreg(all.mods[[2]], "condition", gg=T) + coord_cartesian(ylim=c(5,8))
+
 
 ## Now try polychorics across datasets
 cor.mat <- psych::polychoric(data.target[,4:30])$rho
