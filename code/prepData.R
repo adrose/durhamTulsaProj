@@ -1,29 +1,52 @@
+rm(list=ls()) 
 ### Load library(s)
+library(dplyr)
+library(stats)
 library(ggplot2)
 library(corrplot)
-require(MASS)
-require(Hmisc)
-require(reshape2)
+library(MASS)
+library(Hmisc)
+library(reshape2)
 library(psych)
 library(visreg)
 library(tidyverse)
-
+library(lmerTest)
+library(lme4)
+library(melt)
+library(ggeffects)
+library(sjPlot)
+library(sjmisc)
+library(tidyr)
 ### Load data
 in.dat.ou <- read.csv("./data/TRM_OUsample.csv")
 in.dat.uk <- read.csv("./data/TRM_UKsample.csv")
+# 
+# # fix age differences
+# #In OU - value is year of age; In UK - 1 = 18-24, 2 = 25-34, 3 = 35-44, 4 = 45-54, 5 = 55-64, 6 = 65-74, 7 = 75+, 8 = Prefer not to answer
+# in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==1] <- 22
+# in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==2] <- 29
+# in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==3] <- 39
+# in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==4] <- 49
+# in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==5] <- 59
+# in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==6] <- 69
+# in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==7] <- 75
+# in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==8] <- NA
+# # 
+#In OU - value is year of age; In UK - 1 = 18-24, 2 = 25-34, 3 = 35-44, 4 = 45-54, 5 = 55-64, 6 = 65-74, 7 = 75+, 8 = Prefer not to answer
+in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==1] <- "18-24"
+in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==2] <- "25-34"
+in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==3] <- "35-44"
+in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==4] <- "45-54"
+in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==5] <- "55-64"
+in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==6] <- "65-74"
+in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==7] <- "75+"
+in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==8] <- "Prefer not to answer"
 
-## fix age differences
-In OU - value is year of age; In UK - 1 = 18-24, 2 = 25-34, 3 = 35-44, 4 = 45-54, 5 = 55-64, 6 = 65-74, 7 = 75+, 8 = Prefer not to answer
-in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==1] <- 22
-in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==2] <- 29
-in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==3] <- 39
-in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==4] <- 49
-in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==5] <- 59
-in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==6] <- 69
-in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==7] <- 75
-in.dat.uk$age_group1182253354455556657758na[in.dat.uk$age_group1182253354455556657758na==8] <- NA
-
-
+#install.packages("labelled")
+#library(labelled)
+in.dat.ou$age[in.dat.ou$age<=24] <- "18-24"
+in.dat.ou$age[in.dat.ou$age>=25 & in.dat.ou$age <=34] <- "25-34"
+in.dat.ou$age[in.dat.ou$age>=35 & in.dat.ou$age <=44] <- "35-44"
 
 ## Source files
 # Used to put multiple graphs on a single pdf 
@@ -68,15 +91,15 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 names(in.dat.ou)[3] <- "condition"
 
 ## Make sure condition is a factor
-in.dat.ou$condition <- factor(in.dat.ou$condition, levels=c(3, 1, 2))
+in.dat.ou$condition <- factor(in.dat.ou$condition, levels=c(1, 2, 3))
 # Now relevel so the mass == 3; riot ==2 and event ==1
 
 
-## First plot a correlation matrix of all of the levels of harm
-corrplot(cor(in.dat.ou[,4:38]))
-corrplot(cor(in.dat.ou[which(in.dat.ou$condition=="1"),4:38]))
-corrplot(cor(in.dat.ou[which(in.dat.ou$condition=="2"),4:38]))
-corrplot(cor(in.dat.ou[which(in.dat.ou$condition=="3"),4:38]))
+# ## First plot a correlation matrix of all of the levels of harm
+# corrplot(cor(in.dat.ou[,4:38]))
+# corrplot(cor(in.dat.ou[which(in.dat.ou$condition=="1"),4:38]))
+# corrplot(cor(in.dat.ou[which(in.dat.ou$condition=="2"),4:38]))
+# corrplot(cor(in.dat.ou[which(in.dat.ou$condition=="3"),4:38]))
 
 ## Now explore polychoric
 # polychoric(in.dat.ou[,4:7])
@@ -155,12 +178,12 @@ data.target.ou$cohort <- "OU"
 data.target$cohort <- "UK"
 data.target <- rbind(data.target, data.target.ou)
 
-## Plot demo vars
-hist(data.target$age)
-corrplot(cor(data.target[,4:30]))
-corrplot(cor(data.target[which(data.target$condition=="1"),4:30]))
-corrplot(cor(data.target[which(data.target$condition=="2"),4:30]))
-corrplot(cor(data.target[which(data.target$condition=="3"),4:30]))
+# ## Plot demo vars
+# hist(data.target$age)
+# corrplot(cor(data.target[,4:30]))
+# corrplot(cor(data.target[which(data.target$condition=="1"),4:30]))
+# corrplot(cor(data.target[which(data.target$condition=="2"),4:30]))
+# corrplot(cor(data.target[which(data.target$condition=="3"),4:30]))
 
 # rm the ou target
 #rm(data.target.ou)
@@ -179,9 +202,147 @@ data.hlm$questionTarg <- substr(data.hlm$variable, nchar(data.hlm$variable), nch
 data.hlm$questionVal <- substr(data.hlm$variable, 1, nchar(data.hlm$variable)-2)
 ## Now fix the ID overlap
 data.hlm$id <- paste(data.hlm$id, data.hlm$cohort)
+## factorize prior knowldge
+data.hlm$priorknowledge <- recode(data.hlm$priorknowledge, "1" = 'Prior', "2"  = 'No Prior')
+data.hlm$priorknowledge <- factor(data.hlm$priorknowledge, levels=c("Prior", "No Prior"))
+##rename questiontarg and condition
+data.hlm$questionTarg <- recode(data.hlm$questionTarg, "b" = 'Black Tulsans', "w"  = 'White Tulsans', "p" = "Tulsa Police")
+data.hlm$condition <- recode(data.hlm$condition, "1" = 'Riot', "2"  = 'Massacre', "3" = "Event")
+data.hlm<-data.hlm %>% 
+  rename(Knowledge  = priorknowledge,
+         Target = questionTarg,
+         Item = questionVal,
+         Valence = condition,
+         Judgment = value
+  )
+head(data.hlm)
 
+#data split by knowledge
+data.hlm_know<-filter(data.hlm, Knowledge == "Prior")
+data.hlm_noknow<-filter(data.hlm, Knowledge == "No Prior")
+#data split by condition among prior knowled
+data.hlm_event<-filter(data.hlm, Valence == "Event")
+data.hlm_mass<-filter(data.hlm, Valence == "Massacre")
+data.hlm_riot<-filter(data.hlm, Valence == "Riot")
+
+data.hlm.K_event<-filter(data.hlm_know, Valence == "Event")
+data.hlm.K_massacre<-filter(data.hlm_know, Valence == "Massacre")
+data.hlm.K_riot<-filter(data.hlm_know, Valence == "Riot")
+#library(pbkrtest)
 ## Now model these
-mod.one <- lmerTest::lmer(value ~ variable + cohort + gender + age + condition + priorknowledge + (1|id), data=data.hlm)
+mod.zero <- lmerTest::lmer(Judgment ~ (1|id), data=data.hlm)
+mod.one <- lmerTest::lmer(Judgment ~ (Valence + Knowledge + Target + Item)^4 + cohort +(1|id), data=data.hlm)
+mod.two <- lmerTest::lmer(Judgment ~ (Valence + Knowledge + Target + Item)^4 + cohort + age +(1|id), data=data.hlm)
+#summary(mod.one)
+aov<-anova(mod.one, ddf = "Satterthwaite", type = 3)
+aov<-round(aov, 2)
+aov<-aov[,-c(1:4)]
+#aov reduced table
+aov$`Pr(>F)`
+library(qvalue)
+#qobj <- qvalue(aov$`Pr(>F)`, lambda=0.5, pfdr=TRUE)
+qobj <- qvalue(p = aov$`Pr(>F)`, fdr.level=0.05, pi0.method="bootstrap", adj=1.2)
+aov$fdr.p.adj <- p.adjust(p = aov$`Pr(>F)`, method = "fdr", n = length(aov$`Pr(>F)`))
+aov$fdr.p.adj <- round(aov$fdr.p.adj, 2)
+aov$qvals <- round(qobj$qvalues, 2)
+View(aov)
+
+#### compute predvals and include in data.hlm ####
+predict(mod.one)
+data.hlm$predVals <- predict(mod.one)
+
+#### ggplot ####
+library(jtools)
+library(ggplot2)
+library(ggsignif)
+#https://quantdev.ssri.psu.edu/tutorials/five-ish-steps-create-pretty-interaction-plots-multi-level-model-r
+#barplot - ondition x target x knowledge
+ggplot(data.hlm, aes(x=Target, y=predVals, color=Knowledge, group=as.factor(Knowledge), fill=as.factor(Knowledge))) +
+  geom_bar(stat = "summary", position = "dodge", color = "black") + facet_wrap(.~condition) + labs(title = "", x= "Target Group", y="Judgment Value", color="", fill="") + 
+  theme_apa() + scale_fill_manual(values = c("Prior" = "black", "No Prior" = "dark gray"))+scale_y_continuous(breaks=seq(1,7,1))
+  #+geom_signif(comparisons = list(c("Prior", "No Prior")), map_signif_level=TRUE)
+  #+theme(text=element_text(size=20))
+##
+
+#knowledge by target interaction
+ggplot(data.hlm, aes(x=Knowledge, y=predVals, color=Target, group=as.factor(Target), fill=as.factor(Target))) +
+  geom_bar(stat = "summary", position = "dodge", color = "black") + labs(title = "", x= "Knowledge", y="Judgment Value", color="", fill="") + 
+  theme_apa() + scale_fill_manual(values = c("Black Tulsans" = "black", "Tulsa Police" = "dark gray","White Tulsans" = "White"))+
+  scale_y_continuous(breaks=seq(1,7,1))
+  #+geom_signif(comparisons = list(c("Prior", "No Prior", "Black Tulsans", "White Tulsans", "Tulsa Police")), map_signif_level=TRUE)
+
+#knowledge x target x item
+ggplot(data.hlm, aes(x=Item, y=predVals, color=Knowledge, group=as.factor(Knowledge), fill=as.factor(Knowledge))) +
+  geom_bar(stat = "summary", position = "dodge", color = "black") + facet_wrap(.~Target) + labs(title = "", x= "Item", y="Judgment Value", color="", fill="") + 
+  theme_apa() + scale_fill_manual(values = c("Prior" = "black", "No Prior" = "dark gray"))+
+  scale_y_continuous(breaks=seq(1,7,1))
+
+#target x rating x condition
+ggplot(data.hlm, aes(x=Item, y=predVals, color=Target, group=as.factor(Target), fill=as.factor(Target))) +
+  geom_bar(stat = "summary", position = "dodge", color = "black") + facet_wrap(.~condition) + labs(title = "", x= "Item", y="Judgment Value", color="", fill="") + 
+  theme_apa() + scale_fill_manual(values = c("Black Tulsans" = "black", "Tulsa Police" = "dark gray","White Tulsans" = "White"))+
+  scale_y_continuous(breaks=seq(1,7,1))
+
+
+
+
+#### other plots #####
+
+#difflsmeans(mod.one,test.effs="condition:Knowledge:Target")
+library(emmeans)
+library(see)
+library(patchwork)
+library(effects)
+library(glmmTMB)
+emmeans(mod.one, list(pairwise ~ condition:Knowledge:Target), adjust = "FDR", ddf = "Satterthwaite")
+emmeans(mod.one, list(pairwise ~ condition:Knowledge:Target), adjust = "Tukey")
+difflsmeans(mod.one, test.effs = "condition", ddf="Kenward-Roger")
+library(rstatix)
+
+# library(EMAtools)
+# #formula version combines these functions
+# dscores<-round(lme.dscore(mod = mod.one, data = data.hlm, type = "lme4"), 2)
+# 
+# data.hlm[ sum=sum(Knowledge)]  # Add grouped column
+# data_grouped      
+
+table(data.hlm$Knowledge, data.hlm$id)
+
+plot_model(mod.one, type = "pred", terms = c("Item", "Target", "condition"), 
+              axis.lim = c(1,8), colors = "gs", title = "", axis.title = "Judgment Value", dot.size = 4)+theme_apa()
+
+options(max.print=c(9999999))
+#emm_options(pbkrtest.limit = 8262)
+#condition x knowledge x target
+plot_model(mod.one, type = "int", terms = c("Target", "Knowledge", "condition"), axis.lim = c(1,8), )
+#knowledge x target x item
+plot_model(mod.one, type = "pred", terms = c("Item", "Knowledge", "Target"), axis.lim = c(1,8))
+#target x item
+plot_model(mod.one, type = "pred", terms = c("Item", "Target"), axis.lim = c(1,8))
+#knowledge x target
+plot_model(mod.one, type = "pred", terms = c("Target", "Knowledge"), axis.lim = c(1,8))
+#target
+plot_model(mod.one, type = "pred", terms = c("Target"), axis.lim = c(1,8))
+#item
+plot_model(mod.one, type = "pred", terms = c("Item"), axis.lim = c(1,8))
+#cohort
+plot_model(mod.one, type = "pred", terms = c("cohort"), axis.lim = c(1,8))
+#target x condition 
+plot_model(mod.one, type = "pred", terms = c("Target", "condition"), axis.lim = c(1,8))
+
+
+plot_model(mod.one, type = "pred", axis.lim = c(1,8))
+plot_model(mod.one, type = "pred", terms = c("Item", "Knowledge", "Target"), axis.lim = c(1,8))
+plot_model(mod.one, type = "pred", terms = c("Target","condition"), axis.lim = c(1,8))
+plot_model(mod.one, type = "pred", terms = c("condition","Knowledge","Target"), axis.lim = c(1,8))
+#raw means
+means<-data.hlm %>%
+  group_by(Target, condition, Knowledge) %>%
+  summarise(mean_run = mean(value))
+view(means)
+
+
+
 ## No significant cohort effect or any demographic effects really
 mod.two <- lmerTest::lmer(value ~ variable * condition + (1|id), data=data.hlm) ## No sig interaction
 ## Now see if different conditions assign different levels across targets
