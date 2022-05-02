@@ -1,2 +1,2 @@
 # durhamTulsaProj
-quick analyses for Druham et al., 
+Analyses for Durham et al., 
