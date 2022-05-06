@@ -2,6 +2,7 @@
 library(ggplot2)
 library(corrplot)
 require(MASS)
+library(Rmisc)
 require(Hmisc)
 require(reshape2)
 library(psych)
