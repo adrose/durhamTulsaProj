@@ -1,6 +1,7 @@
 ### Load library(s)
 library(ggplot2)
 library(corrplot)
+library(Rmisc)
 require(MASS)
 require(Hmisc)
 require(reshape2)
