@@ -114,4 +114,4 @@ p2 <- summarySE(data = data.hlm, measurevar = "predVal", groupvars = c("priorkno
   coord_cartesian(ylim=c(1,7)) +
   scale_fill_grey()
 
-ggsave(plot = p2, filename = "./figures/fig2.png", dpi=600)
+ggsave(plot = p2, filename = "./figures/fig3.png", dpi=600)
