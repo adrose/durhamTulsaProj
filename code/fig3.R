@@ -102,7 +102,7 @@ mod.five.police <- lmerTest::lmer(value ~ priorknowledge + questionVal + conditi
 ## Now plot these results
 data.hlm$predVal <- predict(mod.five)
 data.hlm$groupVar <- paste(data.hlm$priorknowledge, data.hlm$questionTarg)
-p2 <- summarySE(data = data.hlm, measurevar = "predVal", groupvars = c("priorknowledge", "questionTarg"), na.rm=T) %>% 
+p3 <- summarySE(data = data.hlm, measurevar = "predVal", groupvars = c("priorknowledge", "questionTarg"), na.rm=T) %>% 
   ggplot(., aes(x=priorknowledge, y=predVal)) +
   geom_bar(stat="identity", position="dodge") +
   facet_grid(. ~ questionTarg) +
