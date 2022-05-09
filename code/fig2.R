@@ -127,7 +127,7 @@ lapply(all.mods[paste(police.vals.sig$question, police.vals.sig$target)], summar
 ## Now plot these results
 data.hlm$predVal <- predict(mod.five)
 data.hlm$groupVar <- paste(data.hlm$priorknowledge, data.hlm$questionTarg)
-p3 <- summarySE(data = data.hlm, measurevar = "predVal", groupvars = c("priorknowledge", "questionTarg", "questionVal"), na.rm=T) %>% 
+p2 <- summarySE(data = data.hlm, measurevar = "predVal", groupvars = c("priorknowledge", "questionTarg", "questionVal"), na.rm=T) %>% 
   ggplot(., aes(x=priorknowledge, y=predVal, group=priorknowledge, fill=priorknowledge)) +
   geom_bar(stat="identity", position="dodge") +
   facet_grid(questionTarg ~ questionVal) +
@@ -139,4 +139,4 @@ p3 <- summarySE(data = data.hlm, measurevar = "predVal", groupvars = c("priorkno
   coord_cartesian(ylim=c(1,7)) +
   scale_fill_grey()
 
-ggsave(plot = p3, filename = "./figures/fig3.png", dpi=1200, width = 10, height = 6)
+ggsave(plot = p3, filename = "./figures/fig2.png", dpi=1200, width = 10, height = 6)
